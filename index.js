@@ -26,6 +26,8 @@ app.use(express.json()); // --> untuk membolehkan kita menggunakan 'Content-Type
 // .get(), .post(), .put(), .patch(), .delete() --> yang paling umum dipakai
 // .options() --> lebih jarang dipakai, karena ini lebih ke preflight (untuk CORS umumnya)
  
+
+//1. Generate Text
 app.post('/generate-text', async (req, res) => {
     // handle bagaimana request diterima oleh user
     const { message } = req.body || {};
@@ -44,7 +46,62 @@ app.post('/generate-text', async (req, res) => {
         reply: response.text
     });
 });
- 
+
+//2. Generate from image
+app.post('/generate-from-image', upload.single('image'), async (req, res) => {
+    try{
+        const {prompt} = req.body;
+        const imageBase64 = req.file.buffer.toString('base64');
+        const resp = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {text: prompt},
+                {inlineData: {mimeType: req.file.mimeType, data: imageBase64}}
+            ]
+        });
+        res.json({ reslut: extractText(resp) });
+    } catch (err) {
+        res.status(500).json({error: err.message});
+    }
+});
+
+//3. Generate from Document
+app.post('/generate-from-document', upload.single('document'), async (req, res) => {
+    try{
+        const {prompt} = req.body;
+        const docBase64 = req.file.buffer.toString('base64');
+        const resp = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {text: prompt || "Ringkas Dokumen Berikut:"},
+                {inlineData: {mimeType: req.file.mimetype, data: docBase64}}
+            ]
+        });
+        res.json({ reslut: extractText(resp) });
+    } catch (err) {
+        res.status(500).json({error: err.message});
+    }
+}); 
+
+
+//3. Generate from Audio
+app.post('/generate-from-audio', upload.single('audio'), async (req, res) => {
+    try{
+        const {prompt} = req.body;
+        const audioBase64 = req.file.buffer.toString('base64');
+        const resp = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {text: prompt || "Transkrip audio berikut:"},
+                {inlineData: {mimeType: req.file.mimetype, data: audioBase64}}
+            ]
+        });
+        res.json({ reslut: extractText(resp) });
+    } catch (err) {
+        res.status(500).json({error: err.message});
+    }
+}); 
+
 // panggil si app-nya di sini
 const port = 3000;
  
